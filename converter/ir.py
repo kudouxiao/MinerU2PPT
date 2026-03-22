@@ -373,8 +373,6 @@ def normalize_element_ir(element: Any) -> ElementIR:
             lines=normalized_lines,
         )
 
-        if not text_ir.text and not text_ir.text_runs:
-            raise ValueError("Text IR element requires text or text_runs")
         return text_ir
 
     if isinstance(element, ImageIR):
@@ -443,9 +441,6 @@ def normalize_element_ir(element: Any) -> ElementIR:
             lines=_normalize_lines(element.get("lines"), bbox),
         )
 
-        if not text_ir.text and not text_ir.text_runs:
-            raise ValueError("Text IR element requires text or text_runs")
-
         return text_ir
 
     return ImageIR(
@@ -463,7 +458,13 @@ def normalize_element_ir(element: Any) -> ElementIR:
 
 
 def normalize_elements(elements: list[Any]) -> list[ElementIR]:
-    return [normalize_element_ir(elem) for elem in elements]
+    result: list[ElementIR] = []
+    for elem in elements:
+        normalized = normalize_element_ir(elem)
+        if isinstance(normalized, TextIR) and not normalized.text and not normalized.text_runs:
+            continue
+        result.append(normalized)
+    return result
 
 
 def validate_ir_elements(

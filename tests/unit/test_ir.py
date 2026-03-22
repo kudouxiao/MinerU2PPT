@@ -112,6 +112,81 @@ class TestIR(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_ir_elements(elements, require_text_runs_consistency=True)
 
+    def test_normalize_elements_skips_empty_text_element(self):
+        """Text blocks with no content must be silently dropped instead of crashing."""
+        from converter.ir import normalize_elements
+        elements = [
+            {
+                "type": "text",
+                "bbox": [0, 0, 100, 20],
+                "text": "",
+                "lines": [],
+                "text_runs": None,
+                "source": "mineru",
+                "order": [0, 0],
+                "style": {"bold": False, "font_size": None, "align": "left"},
+                "is_discarded": False,
+                "group_id": None,
+            },
+            {
+                "type": "text",
+                "bbox": [0, 30, 100, 50],
+                "text": "hello",
+                "source": "mineru",
+            },
+        ]
+        result = normalize_elements(elements)
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0], TextIR)
+        self.assertEqual(result[0].text, "hello")
+
+    def test_validate_ir_elements_drops_empty_text_element(self):
+        """validate_ir_elements silently filters empty-text blocks from real MinerU JSON."""
+        elements = [
+            {
+                "type": "text",
+                "bbox": [0, 0, 100, 20],
+                "text": None,
+                "lines": None,
+                "text_runs": None,
+                "source": "mineru",
+            },
+            {
+                "type": "text",
+                "bbox": [0, 25, 100, 45],
+                "text": "visible",
+                "source": "mineru",
+            },
+        ]
+        result = validate_ir_elements(elements)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].text, "visible")
+
+    def test_normalize_elements_skips_empty_text_ir_object(self):
+        """TextIR objects with empty text and no text_runs are silently dropped."""
+        from converter.ir import normalize_elements
+        empty_ir = TextIR(
+            type="text",
+            bbox=[0.0, 0.0, 100.0, 20.0],
+            text="",
+            source="mineru",
+            order=[0.0, 0.0],
+            style={"bold": False, "font_size": None, "align": "left"},
+            text_runs=None,
+        )
+        good_ir = TextIR(
+            type="text",
+            bbox=[0.0, 30.0, 100.0, 50.0],
+            text="ok",
+            source="mineru",
+            order=[30.0, 0.0],
+            style={"bold": False, "font_size": None, "align": "left"},
+            text_runs=None,
+        )
+        result = normalize_elements([empty_ir, good_ir])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].text, "ok")
+
 
 if __name__ == "__main__":
     unittest.main()

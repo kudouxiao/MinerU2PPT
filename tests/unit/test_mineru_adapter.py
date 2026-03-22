@@ -150,6 +150,45 @@ class TestMinerUAdapter(unittest.TestCase):
         self.assertFalse(elements[0].is_discarded)
         self.assertTrue(elements[0].is_watermark)
 
+    def test_empty_text_blocks_do_not_crash_extraction(self):
+        """Regression: MinerU text blocks with no content must be silently skipped."""
+        page = {
+            "para_blocks": [
+                {
+                    "type": "text",
+                    "bbox": [10, 10, 100, 30],
+                    "text": "",
+                    "lines": [],
+                },
+                {
+                    "type": "text",
+                    "bbox": [10, 40, 100, 60],
+                    "text": None,
+                    "lines": [
+                        {"bbox": [10, 40, 100, 60], "spans": [{"content": "", "type": "text"}]}
+                    ],
+                },
+                {
+                    "type": "title",
+                    "bbox": [10, 70, 100, 90],
+                    "lines": [
+                        {"bbox": [10, 70, 100, 90], "spans": [{"content": "Title", "type": "text", "bbox": [10, 70, 100, 90]}]}
+                    ],
+                },
+            ],
+            "images": [],
+            "tables": [],
+            "discarded_blocks": [],
+        }
+
+        from converter.ir import validate_ir_elements
+        elements = validate_ir_elements(
+            self.adapter.extract_page_elements(MinerUPageData.from_dict(page))
+        )
+        self.assertEqual(len(elements), 1)
+        self.assertIsInstance(elements[0], TextIR)
+        self.assertEqual(elements[0].text, "Title")
+
 
 if __name__ == "__main__":
     unittest.main()
